@@ -7,10 +7,8 @@ let currentUser = null;
 let userHouses = [];
 let currentHouseId = null;
 let currentRoomId = null;
-
 let scene, camera, renderer, controls;
 
-// All'avvio controlla se l'utente ha una sessione attiva su Supabase
 window.addEventListener('DOMContentLoaded', async () => {
     if (dbClient) {
         const { data: { session } } = await dbClient.auth.getSession();
@@ -26,7 +24,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Gestione Tab Accesso / Registrazione
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('-translate-x-full');
+}
+
 function switchAuthTab(mode) {
     const isReg = (mode === 'register');
     document.getElementById('tab-register').className = `flex-1 py-2 text-xs font-semibold rounded-lg transition ${isReg ? 'bg-orange-500 text-white' : 'text-slate-400'}`;
@@ -36,7 +38,6 @@ function switchAuthTab(mode) {
     document.getElementById('auth-title').innerText = isReg ? "Crea un Account" : "Benvenuto in Casa 3D";
 }
 
-// Autenticazione ufficiale Supabase (Registrazione o Login)
 async function handleAuthAction() {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value.trim();
@@ -81,7 +82,6 @@ function updateUserProfileUI() {
     }
 }
 
-// Caricamento dati da Supabase (Case, Stanze, Spesa, Oggetti)
 async function loadDataFromSupabase() {
     try {
         if (!dbClient) return;
@@ -143,7 +143,6 @@ function updateHouseSelectUI() {
     });
 }
 
-// Gestione Case e Condivisione
 function openHouseModalCustom() { document.getElementById('modal-house').classList.remove('hidden'); }
 function closeHouseModalCustom() { document.getElementById('modal-house').classList.add('hidden'); }
 
@@ -170,7 +169,6 @@ function openShareModal() {
 function closeShareModal() { document.getElementById('modal-share').classList.add('hidden'); }
 function copyShareLink() { navigator.clipboard.writeText(document.getElementById('share-house-id').value); alert("Link copiato!"); }
 
-// Gestione Lista Spesa
 function openShoppingModal() { document.getElementById('modal-shopping').classList.remove('hidden'); renderShoppingList(); }
 function closeShoppingModal() { document.getElementById('modal-shopping').classList.add('hidden'); }
 
@@ -214,7 +212,6 @@ function renderShoppingList() {
     });
 }
 
-// Gestione Stanze e 3D
 function renderSidebarRooms() {
     const list = document.getElementById('sidebar-rooms-list');
     if (!list) return;
@@ -224,7 +221,7 @@ function renderSidebarRooms() {
     house.rooms.forEach(r => {
         const div = document.createElement('div');
         div.className = `w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer ${currentRoomId === r.id ? 'bg-orange-500/20 text-orange-400' : 'text-slate-300 hover:bg-slate-900'}`;
-        div.onclick = () => enterRoom(r.id);
+        div.onclick = () => { enterRoom(r.id); };
         div.innerHTML = `<span>${r.name}</span><span class="text-[10px] text-slate-500">${r.items.length}</span>`;
         list.appendChild(div);
     });
@@ -255,6 +252,13 @@ function enterRoom(id) {
     document.getElementById('view-3d').classList.remove('hidden');
     document.getElementById('room-tools-section').classList.remove('hidden');
     document.getElementById('main-view-title').innerText = room.name;
+    
+    // Chiude automaticamente la barra laterale su mobile
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.add('-translate-x-full');
+    }
+
     initThreeJS(room);
 }
 
@@ -265,6 +269,13 @@ function goToPlan() {
     document.getElementById('room-tools-section').classList.add('hidden');
     document.getElementById('main-view-title').innerText = "Planimetria Generale";
     renderSidebarRooms(); renderRoomsGrid();
+    
+    // Chiude automaticamente la barra laterale su mobile
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.add('-translate-x-full');
+    }
+
     if (renderer) renderer.dispose();
 }
 
@@ -280,7 +291,6 @@ async function saveNewRoom() {
     closeAddRoomModal(); renderSidebarRooms(); renderRoomsGrid();
 }
 
-// Inizializzazione Motore 3D
 function initThreeJS(room) {
     const container = document.getElementById('canvas-container');
     container.innerHTML = '';
@@ -297,10 +307,16 @@ function initThreeJS(room) {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
-    // Pavimento della stanza
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
+
+    window.addEventListener('resize', () => {
+        if (!renderer || !container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
 
     function animate() {
         requestAnimationFrame(animate);
@@ -310,7 +326,6 @@ function initThreeJS(room) {
     animate();
 }
 
-// Inventario Oggetti
 function openAddItemModal() { document.getElementById('modal-item').classList.remove('hidden'); }
 function closeAddItemModal() { document.getElementById('modal-item').classList.add('hidden'); }
 
