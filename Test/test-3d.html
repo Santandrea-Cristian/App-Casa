@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio 3D - Dimensioni Stanza & Unità di Misura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="test-style.css">
+</head>
+<body class="h-screen w-screen flex bg-[#0b0f19] text-white overflow-hidden">
+
+    <!-- PANNELLO DI CONTROLLO LATERALE -->
+    <aside class="w-80 h-full p-5 flex flex-col justify-between border-r border-slate-800 bg-slate-950/90 backdrop-blur-md z-10 shadow-2xl overflow-y-auto">
+        <div class="space-y-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-base font-bold flex items-center gap-2 text-orange-400">
+                    <i class="fa-solid fa-cube"></i> Laboratorio 3D
+                </h1>
+                <!-- Selettore Unità di Misura Globale -->
+                <select id="unit-scale" class="bg-slate-900 border border-slate-700 text-xs text-orange-400 font-semibold rounded-lg px-2 py-1 focus:outline-none">
+                    <option value="m">Metri (m)</option>
+                    <option value="cm">Centimetri (cm)</option>
+                </select>
+            </div>
+
+            <!-- Sezione Proprietà Stanza (Colori e Dimensioni) -->
+            <div class="space-y-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-orange-400">Proprietà Stanza</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Pavimento</label>
+                        <input type="color" id="floor-color" value="#111827" class="w-full h-8 bg-slate-900 rounded-lg cursor-pointer border border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Muri</label>
+                        <input type="color" id="wall-color" value="#1f2937" class="w-full h-8 bg-slate-900 rounded-lg cursor-pointer border border-slate-700">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Largh.</label>
+                        <input type="number" id="room-width" value="16" step="1" min="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Altezza</label>
+                        <input type="number" id="room-height" value="8" step="1" min="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Prof.</label>
+                        <input type="number" id="room-depth" value="16" step="1" min="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                </div>
+                <button id="btn-update-room" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-1.5 rounded-xl text-xs transition border border-slate-700">Aggiorna Stanza</button>
+            </div>
+
+            <!-- Sezione Aggiungi Mobile -->
+            <div class="space-y-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Aggiungi Mobile</h2>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Tipo</label>
+                    <select id="object-type" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-orange-500">
+                        <option value="box">Cubo / Divano</option>
+                        <option value="cylinder">Cilindro / Tavolo</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Colore</label>
+                    <input type="color" id="object-color" value="#f97316" class="w-full h-8 bg-slate-900 rounded-lg cursor-pointer border border-slate-700">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Larghezza</label>
+                        <input type="number" id="new-width" value="2.5" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Altezza</label>
+                        <input type="number" id="new-height" value="1.2" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Profondità</label>
+                        <input type="number" id="new-depth" value="2.0" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                </div>
+                <button id="btn-add" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 rounded-xl text-xs transition shadow-lg shadow-orange-500/20">
+                    Aggiungi alla Scena
+                </button>
+            </div>
+
+            <!-- Pannello Oggetto Selezionato -->
+            <div id="selected-panel" class="space-y-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 hidden">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-orange-400">Modifica Selezionato</h2>
+                <p id="selected-info" class="text-[11px] text-slate-300"></p>
+                
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Colore Mobile</label>
+                    <input type="color" id="edit-color" class="w-full h-8 bg-slate-900 rounded-lg cursor-pointer border border-slate-700">
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Larghezza</label>
+                        <input type="number" id="edit-width" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Altezza</label>
+                        <input type="number" id="edit-height" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400 mb-1">Profondità</label>
+                        <input type="number" id="edit-depth" step="0.5" min="0.2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+                    </div>
+                </div>
+
+                <button id="btn-delete" class="w-full bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 py-2 rounded-xl text-xs transition">
+                    Elimina Oggetto
+                </button>
+            </div>
+        </div>
+
+        <div class="text-[10px] text-slate-500 text-center mt-4">
+            Trascina per muovere, tasto destro per ruotare.
+        </div>
+    </aside>
+
+    <!-- CONTAINER DEL RENDER 3D -->
+    <main id="canvas-container" class="flex-1 h-full relative cursor-grab active:cursor-grabbing">
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur border border-slate-700 px-4 py-2 rounded-xl text-xs text-slate-300 shadow-lg pointer-events-none">
+            💡 <strong>Istruzioni:</strong> Scegli l'unità di misura e dimensiona la stanza o i mobili liberamente.
+        </div>
+    </main>
+
+    <script src="test-script.js"></script>
+</body>
+</html>

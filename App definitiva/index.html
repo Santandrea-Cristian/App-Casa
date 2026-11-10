@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mappa Casa 3D - Progettazione & Inventario</title>
+    <!-- Tailwind CSS per la grafica -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js per il motore 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome per le icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="h-screen w-screen flex overflow-hidden bg-[#0b0f19]">
+
+    <!-- SCHERMATA DI ACCESSO / REGISTRAZIONE -->
+    <div id="modal-welcome" class="fixed inset-0 z-50 bg-[#0b0f19] flex items-center justify-center p-4 hidden">
+        <div class="glass max-w-md w-full p-8 rounded-3xl shadow-2xl border border-slate-700 text-center bg-slate-900/90 backdrop-blur-md">
+            <div class="w-16 h-16 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                <i class="fa-solid fa-house-chimney"></i>
+            </div>
+            <h2 id="auth-title" class="text-2xl font-bold text-white mb-1">Benvenuto in Casa 3D</h2>
+            <p class="text-xs text-slate-400 mb-6">Accedi o registrati per sincronizzare la tua casa sul cloud.</p>
+            
+            <!-- Selettore Modalità -->
+            <div class="flex bg-slate-950 p-1 rounded-xl mb-5 border border-slate-800">
+                <button id="tab-login" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-orange-500 text-white transition">Accedi</button>
+                <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Registrati</button>
+            </div>
+
+            <!-- Modulo -->
+            <div class="space-y-3 text-left">
+                <div id="register-fields" class="space-y-3 hidden">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-[10px] text-slate-300 mb-1">Nome</label><input type="text" id="reg-name" placeholder="Mario" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></div>
+                        <div><label class="block text-[10px] text-slate-300 mb-1">Cognome</label><input type="text" id="reg-surname" placeholder="Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></div>
+                    </div>
+                </div>
+                <div><label class="block text-[10px] text-slate-300 mb-1">Email</label><input type="email" id="auth-email" autocomplete="email" placeholder="mario.rossi@email.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></div>
+                <div><label class="block text-[10px] text-slate-300 mb-1">Password</label><input type="password" id="auth-password" autocomplete="current-password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></div>
+                <button id="auth-submit-btn" onclick="handleAuthAction()" class="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl text-xs transition">Accedi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA LATERALE -->
+    <aside class="w-80 h-full p-5 flex flex-col justify-between border-r border-slate-800 bg-slate-950/90 z-40 overflow-y-auto shrink-0">
+        <div class="space-y-4">
+            <header class="flex items-center gap-2 text-base font-bold text-orange-500 pb-2">
+                <i class="fa-solid fa-cube"></i> Laboratorio 3D
+            </header>
+
+            <!-- Gestione Case -->
+            <div class="card">
+                <div class="card-title">Casa Corrente</div>
+                <select id="house-select" onchange="switchHouse(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-orange-400 font-semibold mb-2"></select>
+                <button onclick="openHouseModalCustom()" class="w-full text-[11px] text-orange-400 font-semibold bg-orange-500/10 py-1.5 rounded-lg border border-orange-500/20 transition"><i class="fa-solid fa-plus"></i> Nuova Casa / Unisciti</button>
+            </div>
+
+            <!-- Profilo e Uscita -->
+            <div class="card flex flex-row items-center justify-between p-3">
+                <div class="truncate">
+                    <h4 id="user-display-name" class="text-xs font-bold text-white truncate">Utente</h4>
+                    <p id="sidebar-house-name" class="text-[10px] text-orange-400 font-medium truncate">Casa Principale</p>
+                </div>
+                <button onclick="logoutUser()" class="text-slate-400 hover:text-red-400 text-xs p-1.5 transition" title="Esci"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+
+            <!-- Navigazione -->
+            <div class="card space-y-2">
+                <div class="card-title">Navigazione</div>
+                <button onclick="goToPlan()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 transition"><i class="fa-solid fa-map text-orange-400"></i> Planimetria</button>
+                <button onclick="openShoppingModal()" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 transition">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-basket-shopping text-emerald-400"></i> Lista Spesa</span>
+                    <span id="shopping-count-badge" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="openAddRoomModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 transition"><i class="fa-solid fa-door-open text-emerald-400"></i> Aggiungi Stanza</button>
+            </div>
+
+            <!-- Strumenti Stanza (Visibili solo dentro una stanza) -->
+            <div id="room-tools-section" class="space-y-4 hidden">
+                <div class="card">
+                    <div class="card-title">Aggiungi Mobile</div>
+                    <select id="add-object-type" class="w-full mb-2 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                        <option value="divano">🛋️ Divano</option><option value="letto">🛏️ Letto</option><option value="tavolo">🍽️ Tavolo</option><option value="armadio">🚪 Armadio</option>
+                    </select>
+                    <button class="btn" onclick="confirmAddFurniture()">Aggiungi alla Scena</button>
+                </div>
+                <div class="card">
+                    <div class="card-title">Inventario Oggetti</div>
+                    <button onclick="openAddItemModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl text-xs font-semibold transition">Aggiungi Oggetto & Foto</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Le tue Stanze</div>
+                <div id="sidebar-rooms-list" class="space-y-1"></div>
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800">
+            <button onclick="openShareModal()" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-share-nodes"></i> Condividi con Famiglia</button>
+        </div>
+    </aside>
+
+    <!-- AREA PRINCIPALE (3D / PLANIMETRIA) -->
+    <main class="flex-1 h-full flex flex-col relative bg-[#0b0f19]">
+        <header class="glass h-16 px-6 flex justify-between items-center z-30 border-b border-slate-800">
+            <h2 id="main-view-title" class="text-base font-bold text-white">Planimetria Generale</h2>
+            <span id="header-room-subtitle" class="text-xs text-slate-400">Configuratore Casa</span>
+        </header>
+
+        <div id="view-plan" class="flex-1 p-6 overflow-y-auto flex flex-col items-center justify-center">
+            <div id="rooms-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl w-full"></div>
+        </div>
+
+        <div id="view-3d" class="hidden flex-1 relative w-full h-full">
+            <div id="canvas-container" class="w-full h-full cursor-grab"></div>
+            <div class="absolute bottom-6 right-6 z-20 glass p-4 rounded-2xl max-w-sm w-full shadow-2xl border border-slate-700 bg-slate-900/90">
+                <h4 class="text-xs font-semibold text-slate-300 uppercase mb-2">Oggetti in stanza</h4>
+                <div id="room-items-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALI DI SERVIZIO -->
+    <div id="modal-room" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-700 space-y-4">
+            <h3 class="text-lg font-bold text-white">Nuova Stanza</h3>
+            <input type="text" id="new-room-name" placeholder="Nome Stanza..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <button onclick="saveNewRoom()" class="w-full bg-orange-500 text-white py-2 rounded-xl text-sm font-semibold">Crea</button>
+            <button onclick="closeAddRoomModal()" class="w-full text-xs text-slate-400">Annulla</button>
+        </div>
+    </div>
+
+    <div id="modal-house" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-700 space-y-4">
+            <h3 class="text-lg font-bold text-white">Gestione Casa</h3>
+            <input type="text" id="input-new-house-name" placeholder="Nome nuova casa..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <button onclick="submitCreateHouse()" class="w-full bg-orange-500 text-white py-2 rounded-xl text-xs font-semibold">Crea Casa</button>
+            <div class="text-center text-xs text-slate-500">OPPURE</div>
+            <input type="text" id="input-join-house-link" placeholder="Incolla link di invito..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <button onclick="submitJoinHouse()" class="w-full bg-emerald-500 text-white py-2 rounded-xl text-xs font-semibold">Unisciti</button>
+            <button onclick="closeHouseModalCustom()" class="w-full text-xs text-slate-400">Chiudi</button>
+        </div>
+    </div>
+
+    <div id="modal-shopping" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-700 max-h-[80vh] flex flex-col">
+            <h3 class="text-lg font-bold text-white mb-3">Lista Spesa Condivisa</h3>
+            <div class="flex gap-2 mb-3"><input type="text" id="shopping-item-input" placeholder="Articolo..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"><button onclick="addShoppingItem()" class="bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs">Aggiungi</button></div>
+            <div id="shopping-list-container" class="flex-1 overflow-y-auto space-y-2"></div>
+            <button onclick="closeShoppingModal()" class="mt-4 text-xs text-slate-400">Chiudi</button>
+        </div>
+    </div>
+
+    <div id="modal-item" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-700 space-y-3">
+            <h3 class="text-lg font-bold text-white">Aggiungi Oggetto & Foto</h3>
+            <input type="text" id="item-name" placeholder="Nome oggetto..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <input type="text" id="item-location" placeholder="Posizione (es. Ripiano)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white">
+            <textarea id="item-desc" placeholder="Descrizione..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white h-16"></textarea>
+            <input type="file" id="item-photo" accept="image/*" class="w-full text-xs text-slate-400">
+            <button onclick="saveNewItem()" class="w-full bg-orange-500 text-white py-2 rounded-xl text-sm font-semibold">Salva</button>
+            <button onclick="closeAddItemModal()" class="w-full text-xs text-slate-400">Annulla</button>
+        </div>
+    </div>
+
+    <div id="modal-share" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-6 rounded-2xl bg-slate-900 border border-slate-700 space-y-3">
+            <h3 class="text-lg font-bold text-white">Condividi Casa</h3>
+            <input type="text" id="share-house-id" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-orange-400 font-mono select-all">
+            <button onclick="copyShareLink()" class="w-full bg-orange-500 text-white py-2 rounded-xl text-xs font-semibold">Copia Link</button>
+            <button onclick="closeShareModal()" class="w-full text-xs text-slate-400">Chiudi</button>
+        </div>
+    </div>
+
+    <script src="./app.js"></script>
+</body>
+</html>
